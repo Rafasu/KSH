@@ -1,0 +1,92 @@
+#!/usr/bin/ksh
+#################################
+#                               #
+#    Sistemas Operativos        #
+#       Proyecto Final          #
+#                               #
+#################################
+
+#Falta checar el caso donde si no se puede recuperar a donde se borró, los lleve a un carpeta .Recuperados
+
+
+####################################################################
+# Caso 1: Recuperar todos los archivos de la Papelera de reciclaje
+# Validar que se reciba solo un parámetro
+if test $# -eq 1
+then
+  #Comprobar que la bandera sea válida
+  case $1 in
+  # Recupera todos los archivos de la papelera de reciclaje
+  -A)Total=`cat ~/.Papelera/.Eliminado | wc -l`
+     Imprimir=`expr $Total - 1`
+     # Para cada uno de los archivos en la lista del archivo ".Eliminado"
+     for Archivo in `cat ~/.Papelera/.Eliminado | tail -$Imprimir | cut -f1 -d#`
+     do
+       #Recuperar dirección de donde fue eliminado el archivo
+       Direccion=`grep -w $Archivo ~/.Papelera/.Eliminado | cut -f2 -d#`
+       Move=`mv $HOME/.Papelera/$Archivo $Direccion 2>/dev/null`
+       if test $? -ne 0
+       then
+         mkdir -p $HOME/Recuperados
+         #Permisos para la nueva carpeta
+         chmod ugo+rwx $HOME/Recuperados
+         Move=`mv $HOME/.Papelera/$Archivo $HOME/Recuperados`
+         # Sobreescribir archivo ".Eliminado" sin la ruta del archivo que se acaba de recuperar.
+         Contenido=`grep -v "\<$Archivo\>" ~/.Papelera/.Eliminado`
+         `echo "$Contenido" > ~/.Papelera/.Eliminado`
+       else
+         #Sobreescribir archivo ".Eliminado" sin la ruta del archivo que se acaba de recuperar.
+         Contenido=`grep -v "\<$Archivo\>" ~/.Papelera/.Eliminado`
+         `echo "$Contenido" > ~/.Papelera/.Eliminado`
+       fi
+     done
+     #Eliminar archivo ".Eliminado"
+     rm $HOME/.Papelera/.Eliminado
+     echo "\nTodos los archivos de la papelera de reciclaje han sido recuperados.\n"
+  ;;
+  ################################################
+  # Bandera -F sin parámetros
+  -F) echo "\nError: El script debe recibir el nombre del archivo a recuperar\n"
+  ;;
+  ################################################
+  # La bandera no es válida
+  *)echo "\nError: La bandera utilizada no es válida para este script\n"
+  ;;
+  esac
+fi
+######################################################################
+#Caso 2: Recupera un archivo en especifico de la papelera.
+# Validar que se reciban dos parametros
+if test $# -eq 2
+then
+  # Comprobar que la bandera utilizada sea válida
+  case $1 in
+  -F)#Validar que el archivo exista
+     Archivo=`grep "\<$2\>" $HOME/.Papelera/.Eliminado`
+     if test $? -eq 0
+     then
+       # Obtener Ruta
+       Ruta=`echo "$Archivo" | cut -f2 -d#`
+       # Regresar archivo a su origen
+       Move=`mv $HOME/.Papelera/$2 $Ruta 2>/dev/null`
+       if test $? -ne 0
+       then
+         Move=`mv $HOME/.Papelera/$2 $HOME/Recuperados/$2`
+         Contenido=`grep -v "\<$2\>" $HOME/.Papelera/.Eliminado`
+         `echo "$Contenido" > $HOME/.Papelera/.Eliminado`
+       else
+         #Sobreescribir el archivo ".Eliminado"
+         Contenido=`grep -v "\<$2\>" $HOME/.Papelera/.Eliminado`
+         `echo "$Contenido" > $HOME/.Papelera/.Eliminado`
+       fi
+     else
+       echo "\nError: El archivo \"$2\" no existe.\n"
+     fi
+  ;;
+  *)echo "\nError: La bandera utilizada no es v¦lida  para este script\n"
+  ;;
+  esac
+fi
+
+
+

@@ -1,0 +1,156 @@
+#!/usr/bin/ksh
+#########################################
+#       Sistemas Operativos             #
+#       	 	                #
+#                                       #
+#########################################
+
+
+
+#############################################################
+# Iniciar papelera
+# Validar que el directorio ".Papelera" exista en el directorio Home
+Directorio=`ls -la ~ | tr -s '[ ]' '[#*]' | tr -s '[    ]' '[#*]' | cut -f9 -d# | grep .Papelera`
+if test $? -ne 0
+then
+  mkdir $HOME/.Papelera
+  # Dar todos los permisos al directorio
+  chmod ugo+rwx $HOME/.Papelera
+fi
+
+
+#############################################################
+#Iniciar archivo ".Eliminado"
+# Validar que el archivo oculto ".Eliminado" se enuentre en el directorio oculto Papelera
+Eliminado=`ls -la ~/.Papelera | grep .Eliminado`
+if test $? -ne 0
+then
+  #Crea archivo ".Eliminado" en la papelera
+  echo "ListaArchivos" > ~/.Papelera/.Eliminado
+  # Dar todos los permisos al archivo
+  chmod ugo+rwx $HOME/.Papelera/.Eliminado
+fi
+
+
+#############################################################
+# Caso 1: Banderas(-B,-I,-V)
+#Validar que se reciba un parámetro
+if test $# -eq 1
+then
+  # Variables para control para no desplegar los archivos . y ..
+  Total=`ls -la ~/.Papelera | wc -l`
+  Imprimir=`expr $Total - 3`
+  case $1 in
+    ####################################################################
+    #Listar papelera de reciclaje
+    -V)for Archivo in `ls -la ~/.Papelera | tr -s '[ ]' '[#*]' | tr -s '[     ]' '[#*]' | cut -f9 -d# | tail -$Imprimir | grep -v .Eliminado`
+       do
+	 echo "\n $Archivo \n"
+       done
+    ;;
+    ####################################################################
+    # Eliminar todos los archivos de la papelera.
+    -B)# Validar que el usuario quiera eliminar todos los archivos de la papelera.
+       echo "\nDesea eliminar todo el contenido de la papelera de reciclaje(S/N):"
+       read respuesta1
+       # Falta validar que sea una respuesta valida
+       # Transformar respuesta a mayusculas
+       RMayusculas1=`echo $respuesta1 | tr -s '[a-z]' '[A-Z]'`
+       case $RMayusculas1 in
+         S)#Eliminar cada uno de los archivos de la papelera.
+           for Archivo in `ls -la ~/.Papelera | tr -s '[ ]' '[#*]' | tr -s '[   ]' '[#*]' | cut -f9 -d# | tail -$Imprimir | grep -v .Eliminado`
+           do
+             rm ~/.Papelera/$Archivo
+           done
+           # Eliminar archivo ".Eliminado"
+           rm ~/.Papelera/.Eliminado
+           echo "\nTodos los archivos de la papelera de reciclaje han sido eliminados.\n"
+         ;;
+         N) echo "\nCancelando borrado.\n"
+         ;;
+         # Opcion no valida
+ 	*)echo "OnOpción invalida\n"
+         ;;
+       esac
+    ;;
+    ###################################################################
+    # Preguntar al usuario que archivos eliminar de la papelera.
+    -I)for Archivo in `ls -la ~/.Papelera | tr -s '[ ]' '[#*]' | tr -s '[       ]' '[#*]' | cut -f9 -d# | tail -$Imprimir | grep -v .Eliminado`
+       do
+         # Validar que el usuario quiera eliminar el archivo de la papelera.
+         echo "\nDesea eliminar de la papelera de reciclaje el archivo: \"$Archivo\"? (S/N):"
+         read respuesta2
+         #Transformar a mayusculas
+         RMayusculas2=`echo $respuesta2 | tr -s '[a-z]' '[A-Z]'`
+         case $RMayusculas2 in
+           S)# Obtener contenido de las rutas, sin la ruta qdel archivo que se elimin¦
+             Contenido=`grep -v "\<$Archivo\>" $HOME/.Papelera/.Eliminado`
+             #Sobreescribir el archivo sin la ruta que del archivo que se eliminó
+             `echo "$Contenido\n" > ~/.Papelera/.Eliminado`
+              # Eliminar archivo de la papelera
+              rm ~/.Papelera/$Archivo
+           ;;
+           N)
+           ;;
+           *)echo "\nOpccion invalida\n"
+ 	esac
+       done
+    ;;
+    ###################################################################
+    # Error:La bandera -M no recibe parámetros
+    -M)echo "\nError: El script debe recibir el nombre del archivo que se desea borrar !!!.\n"
+    ;;
+    ###################################################################
+    # La Bandera no es válida
+    *)echo "\nError:La bandera utilizada no es válida para este script !!!\n"
+    ;;
+  esac
+fi
+
+
+
+
+############################################################################
+# Caso 2: Se desea mover ("Borrar") el archivo a la papelera.
+# Validar que se reciban dos parámetros.
+if test $# -ge 2
+then
+  # Comprobar que la bandera sea válida
+  case $1 in
+    -M)while [ $# -ge 2 ]
+       do
+         # Obtener a partir de donde cortar
+         Cortar=`echo $2 | tr -s '[/]' '[#*]' | tr -s '[#]' '[\n*]'| wc -l`
+         # Obtener nombre del archivo
+         Nombre=`echo $2 | tr -s '[/]' '[#*]' | cut -f$Cortar -d#`
+         # Validar que el archivo exista:
+         if test -L $2 || test -f $2
+         then
+           # Obtener contenido del archivo y la ruta del archivo eliminado
+           ContenidoAnterior=`cat ~/.Papelera/.Eliminado`
+           Ruta=`pwd`
+           #Sobreescribir el archivo con las rutas de antes y la nueva.
+           `echo "$ContenidoAnterior\n$Nombre#$Ruta/$2" > ~/.Papelera/.Eliminado`
+           # Mover el archivo a la papelera
+           mv $2 ~/.Papelera
+         else
+           echo "\nError: El archivo $2 no existe !!!.\n"
+         fi
+         shift 1
+       done
+    ;;
+    #####################################################################
+    # La bandera no es vá¦lida
+    *)echo "\nError: La bandera utilizada no es válida para este script\n"
+    ;;
+  esac
+fi
+
+
+
+
+
+
+
+
+
